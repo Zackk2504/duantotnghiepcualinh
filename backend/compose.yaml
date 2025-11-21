@@ -7,11 +7,46 @@ services:
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin123
-      POSTGRES_DB: student_shop
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d
+    networks:
+      - local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 5s
+      retries: 5
+      timeout: 5s
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.0
+    command: start-dev
+    restart: always
+    ports:
+      - "9082:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_USERNAME: admin
+      KC_DB_PASSWORD: admin123
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_HOSTNAME: localhost
+      KC_FEATURES: token-exchange,admin-fine-grained-authz
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - local
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+
+networks:
+  local:
+    driver: bridge
 
 volumes:
   postgres_data:
+  keycloak_data:
